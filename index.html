@@ -1,0 +1,1387 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Live Leaderboard & Presensi Keaktifan - SMKN 5 Yogyakarta</title>
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- FontAwesome Icons -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <!-- Google Font Inter -->
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        brand: {
+                            50: '#f0f9ff',
+                            100: '#e0f2fe',
+                            500: '#0284c7',
+                            600: '#0284c7',
+                            700: '#0369a1',
+                            800: '#075985',
+                            900: '#0c4a6e',
+                        },
+                        gold: '#f59e0b',
+                        silver: '#9ca3af',
+                        bronze: '#d97706'
+                    },
+                    fontFamily: {
+                        sans: ['Inter', 'sans-serif'],
+                    }
+                }
+            }
+        }
+    </script>
+    <style>
+        body { font-family: 'Inter', sans-serif; }
+        .podium-1 { order: 2; height: 100%; }
+        .podium-2 { order: 1; height: 85%; }
+        .podium-3 { order: 3; height: 75%; }
+        @keyframes popIn {
+            0% { transform: scale(0.85); opacity: 0; }
+            100% { transform: scale(1); opacity: 1; }
+        }
+        .animate-pop { animation: popIn 0.25s cubic-bezier(0.175, 0.885, 0.32, 1.275); }
+        @keyframes pulseGlow {
+            0%, 100% { box-shadow: 0 0 15px rgba(2, 132, 199, 0.3); }
+            50% { box-shadow: 0 0 25px rgba(2, 132, 199, 0.6); }
+        }
+        .pulse-glow { animation: pulseGlow 2s infinite; }
+        /* Custom Scrollbar */
+        ::-webkit-scrollbar { width: 6px; height: 6px; }
+        ::-webkit-scrollbar-track { background: #f1f5f9; }
+        ::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 9999px; }
+        ::-webkit-scrollbar-thumb:hover { background: #94a3b8; }
+    </style>
+</head>
+<body class="bg-slate-50 text-slate-800 min-h-screen flex flex-col selection:bg-sky-500 selection:text-white">
+
+    <!-- Header Navbar -->
+    <header class="bg-gradient-to-r from-sky-900 via-sky-800 to-indigo-900 text-white shadow-lg sticky top-0 z-30">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-3 flex flex-wrap justify-between items-center gap-3">
+            <div class="flex items-center space-x-3">
+                <div class="bg-white/10 p-2.5 rounded-xl border border-white/20 backdrop-blur-sm shadow-inner">
+                    <i class="fa-solid fa-award text-amber-400 text-2xl"></i>
+                </div>
+                <div>
+                    <h1 class="text-lg sm:text-xl font-bold tracking-tight leading-tight">Sistem Keaktifan & Presensi Kelas</h1>
+                    <p class="text-xs text-sky-200 flex items-center gap-1.5 font-medium">
+                        <i class="fa-solid fa-school text-sky-300"></i> SMKN 5 Yogyakarta
+                        <span class="inline-block w-1.5 h-1.5 rounded-full bg-emerald-400"></span>
+                        <span id="currentSubjectBadge" class="bg-white/20 text-white px-2 py-0.5 rounded text-[10px] uppercase tracking-wider font-semibold">KKA</span>
+                    </p>
+                </div>
+            </div>
+
+            <!-- Mode & Class Switcher Tabs -->
+            <div class="flex flex-wrap items-center gap-2">
+                <!-- Main Tab Switcher (Leaderboard vs Presensi) -->
+                <div class="flex items-center bg-sky-950/80 p-1 rounded-xl border border-white/15 text-xs sm:text-sm font-semibold">
+                    <button id="navBtnLeaderboard" onclick="switchMainTab('leaderboard')" class="px-3 py-1.5 rounded-lg transition-all text-white bg-sky-600 shadow font-bold">
+                        <i class="fa-solid fa-trophy mr-1"></i> Leaderboard Poin
+                    </button>
+                    <button id="navBtnAttendance" onclick="switchMainTab('attendance')" class="px-3 py-1.5 rounded-lg transition-all text-sky-200 hover:text-white hover:bg-white/10 font-semibold">
+                        <i class="fa-solid fa-clipboard-user mr-1"></i> Presensi Kelas
+                    </button>
+                </div>
+
+                <!-- Class Switcher -->
+                <div class="flex items-center bg-sky-950/60 p-1 rounded-xl border border-white/10 text-xs sm:text-sm font-medium">
+                    <button id="btnClassTekstil" onclick="switchClass('X_TEKSTIL_A')" 
+                        class="px-3 py-1.5 rounded-lg transition-all duration-200 flex items-center gap-1.5 text-white bg-sky-600 shadow-sm font-semibold">
+                        <i class="fa-solid fa-shirt"></i>
+                        <span>X Tekstil A</span>
+                    </button>
+                    <button id="btnClassLogam" onclick="switchClass('X_LOGAM_B')" 
+                        class="px-3 py-1.5 rounded-lg transition-all duration-200 flex items-center gap-1.5 text-sky-200 hover:text-white hover:bg-white/10">
+                        <i class="fa-solid fa-gears"></i>
+                        <span>X Logam B</span>
+                    </button>
+                </div>
+            </div>
+        </div>
+    </header>
+
+    <!-- Main Container -->
+    <main class="flex-1 max-w-7xl w-full mx-auto px-4 sm:px-6 lg:px-8 py-6 space-y-6">
+
+        <!-- ================= LEADERBOARD SECTION ================= -->
+        <div id="sectionLeaderboard" class="space-y-6">
+            <!-- Top Banner & Quick Controls -->
+            <div class="bg-white rounded-2xl shadow-sm border border-slate-200/80 p-5 flex flex-col md:flex-row gap-4 justify-between items-center">
+                <div>
+                    <div class="flex items-center gap-2">
+                        <span id="classTag" class="px-2.5 py-1 bg-sky-100 text-sky-800 rounded-md text-xs font-bold tracking-wide uppercase">X Tekstil A</span>
+                        <span id="subjectTag" class="px-2.5 py-1 bg-amber-100 text-amber-800 rounded-md text-xs font-semibold">Mata Pelajaran: KKA</span>
+                    </div>
+                    <h2 class="text-xl sm:text-2xl font-extrabold text-slate-800 mt-1">Daftar Keaktifan & Poin Siswa</h2>
+                    <p class="text-xs sm:text-sm text-slate-500 mt-0.5">Berikan +1 poin setiap kali murid bertanya, berpendapat, atau aktif membantu di kelas.</p>
+                </div>
+
+                <!-- Quick Action Buttons -->
+                <div class="flex flex-wrap items-center gap-2 w-full md:w-auto justify-end">
+                    <button onclick="toggleAudio()" id="audioToggleBtn" title="Aktifkan/Matikan Suara" class="px-3 py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-xl transition text-sm flex items-center gap-2 font-medium">
+                        <i id="audioIcon" class="fa-solid fa-volume-high text-sky-600"></i>
+                        <span class="hidden sm:inline">Suara</span>
+                    </button>
+                    <button onclick="openHistoryModal()" class="px-3 py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-xl transition text-sm flex items-center gap-2 font-medium">
+                        <i class="fa-solid fa-clock-rotate-left text-indigo-600"></i>
+                        <span>Riwayat</span>
+                    </button>
+                    <button onclick="openSheetsModal()" class="px-3 py-2 bg-emerald-50 hover:bg-emerald-100 text-emerald-700 border border-emerald-200 rounded-xl transition text-sm flex items-center gap-2 font-semibold">
+                        <i class="fa-solid fa-file-excel text-emerald-600"></i>
+                        <span>Sync Spreadsheet</span>
+                    </button>
+                    <button onclick="exportToCSV()" class="px-3 py-2 bg-sky-50 hover:bg-sky-100 text-sky-700 border border-sky-200 rounded-xl transition text-sm flex items-center gap-2 font-semibold">
+                        <i class="fa-solid fa-download text-sky-600"></i>
+                        <span>Unduh CSV</span>
+                    </button>
+                </div>
+            </div>
+
+            <!-- Stats Summary Bar -->
+            <div class="grid grid-cols-2 md:grid-cols-4 gap-4">
+                <div class="bg-white p-4 rounded-2xl border border-slate-200/80 shadow-sm flex items-center gap-3">
+                    <div class="w-12 h-12 rounded-xl bg-sky-100 text-sky-600 flex items-center justify-center text-xl font-bold">
+                        <i class="fa-solid fa-users"></i>
+                    </div>
+                    <div>
+                        <p class="text-xs text-slate-500 font-medium">Total Murid</p>
+                        <h3 class="text-xl font-extrabold text-slate-800" id="statTotalStudents">36</h3>
+                    </div>
+                </div>
+                <div class="bg-white p-4 rounded-2xl border border-slate-200/80 shadow-sm flex items-center gap-3">
+                    <div class="w-12 h-12 rounded-xl bg-amber-100 text-amber-600 flex items-center justify-center text-xl font-bold">
+                        <i class="fa-solid fa-star"></i>
+                    </div>
+                    <div>
+                        <p class="text-xs text-slate-500 font-medium">Total Poin Kelas</p>
+                        <h3 class="text-xl font-extrabold text-slate-800" id="statTotalPoints">0</h3>
+                    </div>
+                </div>
+                <div class="bg-white p-4 rounded-2xl border border-slate-200/80 shadow-sm flex items-center gap-3">
+                    <div class="w-12 h-12 rounded-xl bg-emerald-100 text-emerald-600 flex items-center justify-center text-xl font-bold">
+                        <i class="fa-solid fa-chart-line"></i>
+                    </div>
+                    <div>
+                        <p class="text-xs text-slate-500 font-medium">Rata-rata Poin</p>
+                        <h3 class="text-xl font-extrabold text-slate-800" id="statAvgPoints">0.0</h3>
+                    </div>
+                </div>
+                <div class="bg-white p-4 rounded-2xl border border-slate-200/80 shadow-sm flex items-center gap-3">
+                    <div class="w-12 h-12 rounded-xl bg-indigo-100 text-indigo-600 flex items-center justify-center text-xl font-bold">
+                        <i class="fa-solid fa-trophy"></i>
+                    </div>
+                    <div>
+                        <p class="text-xs text-slate-500 font-medium">Poin Tertinggi</p>
+                        <h3 class="text-xl font-extrabold text-slate-800" id="statMaxPoints">0</h3>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Top 3 Podium Section -->
+            <div class="bg-gradient-to-b from-slate-900 to-slate-800 rounded-3xl p-6 text-white shadow-xl overflow-hidden relative border border-slate-700">
+                <div class="absolute -right-10 -bottom-10 opacity-10 text-9xl text-amber-300 pointer-events-none">
+                    <i class="fa-solid fa-crown"></i>
+                </div>
+                <h3 class="text-center font-extrabold text-lg sm:text-xl text-amber-400 tracking-wide mb-6 uppercase flex items-center justify-center gap-2">
+                    <i class="fa-solid fa-fire text-amber-400"></i> Top 3 Keaktifan Kelas
+                </h3>
+
+                <div class="flex justify-center items-end gap-3 sm:gap-6 min-h-[220px] max-w-2xl mx-auto pt-4" id="podiumContainer">
+                    <!-- Podium items dynamically rendered by JS -->
+                </div>
+            </div>
+
+            <!-- Search and Filter Bar -->
+            <div class="flex flex-col sm:flex-row gap-3 justify-between items-center bg-white p-4 rounded-2xl border border-slate-200/80 shadow-sm">
+                <div class="relative w-full sm:w-80">
+                    <i class="fa-solid fa-magnifying-glass absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400"></i>
+                    <input type="text" id="searchInput" oninput="renderLeaderboard()" placeholder="Cari nama murid..." 
+                        class="w-full pl-10 pr-4 py-2 rounded-xl border border-slate-200 focus:outline-none focus:ring-2 focus:ring-sky-500 focus:border-sky-500 text-sm">
+                </div>
+
+                <div class="flex items-center gap-2 w-full sm:w-auto justify-end">
+                    <select id="sortSelect" onchange="renderLeaderboard()" class="px-3 py-2 rounded-xl border border-slate-200 text-sm focus:outline-none focus:ring-2 focus:ring-sky-500 font-medium text-slate-700 bg-slate-50">
+                        <option value="rank">Urutkan: Ranking Poin</option>
+                        <option value="name">Urutkan: Nama (A-Z)</option>
+                        <option value="points-asc">Urutkan: Poin Terendah</option>
+                    </select>
+
+                    <div class="bg-slate-100 p-1 rounded-xl flex items-center border border-slate-200">
+                        <button onclick="setViewMode('grid')" id="btnViewGrid" title="Tampilan Kartu" class="p-2 rounded-lg text-sky-600 bg-white shadow-sm transition">
+                            <i class="fa-solid fa-border-all"></i>
+                        </button>
+                        <button onclick="setViewMode('list')" id="btnViewList" title="Tampilan Tabel" class="p-2 rounded-lg text-slate-500 hover:text-slate-800 transition">
+                            <i class="fa-solid fa-list-ol"></i>
+                        </button>
+                    </div>
+
+                    <button onclick="resetClassPoints()" class="px-3 py-2 bg-rose-50 hover:bg-rose-100 text-rose-600 rounded-xl transition text-sm font-semibold border border-rose-200" title="Reset semua poin kelas ini">
+                        <i class="fa-solid fa-rotate-right"></i> Reset Poin
+                    </button>
+                </div>
+            </div>
+
+            <!-- Student Leaderboard Cards / Table Container -->
+            <div id="studentsContainer" class="transition-all duration-300">
+                <!-- Student items dynamically rendered here -->
+            </div>
+        </div>
+
+        <!-- ================= PRESENSI / ABSENSI SECTION ================= -->
+        <div id="sectionAttendance" class="space-y-6 hidden">
+            <!-- Attendance Header Controls -->
+            <div class="bg-white rounded-2xl shadow-sm border border-slate-200/80 p-5 space-y-4">
+                <div class="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 border-b border-slate-100 pb-4">
+                    <div>
+                        <div class="flex items-center gap-2">
+                            <span id="attClassTag" class="px-2.5 py-1 bg-sky-100 text-sky-800 rounded-md text-xs font-bold tracking-wide uppercase">X Tekstil A</span>
+                            <span class="px-2.5 py-1 bg-indigo-100 text-indigo-800 rounded-md text-xs font-semibold">Presensi Harian</span>
+                        </div>
+                        <h2 class="text-xl sm:text-2xl font-extrabold text-slate-800 mt-1">Absensi & Catatan Pembelajaran</h2>
+                        <p class="text-xs sm:text-sm text-slate-500 mt-0.5">Isi status presensi murid (Hadir, Sakit, Izin, Tidak Hadir/Alpa) beserta materi pembelajaran.</p>
+                    </div>
+
+                    <div class="flex flex-wrap items-center gap-2 w-full md:w-auto justify-end">
+                        <button onclick="markAllHadir()" class="px-3.5 py-2 bg-emerald-50 hover:bg-emerald-100 text-emerald-700 border border-emerald-200 rounded-xl transition text-xs font-bold flex items-center gap-1.5">
+                            <i class="fa-solid fa-check-double"></i> Tandai Semua Hadir
+                        </button>
+                        <button onclick="syncAttendanceToSheets()" class="px-3.5 py-2 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl shadow-md transition text-xs font-bold flex items-center gap-1.5">
+                            <i class="fa-solid fa-cloud-arrow-up"></i> Kirim Presensi ke Sheets
+                        </button>
+                        <button onclick="exportAttendanceCSV()" class="px-3.5 py-2 bg-sky-50 hover:bg-sky-100 text-sky-700 border border-sky-200 rounded-xl transition text-xs font-bold flex items-center gap-1.5">
+                            <i class="fa-solid fa-file-csv"></i> Unduh Presensi CSV
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Date & Material Input Bar -->
+                <div class="grid grid-cols-1 md:grid-cols-3 gap-4 bg-slate-50 p-4 rounded-xl border border-slate-200/80">
+                    <div>
+                        <label class="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1">
+                            <i class="fa-solid fa-calendar-days text-sky-600 mr-1"></i> Tanggal Pertemuan
+                        </label>
+                        <input type="date" id="attDateInput" onchange="onAttendanceDateChange()" class="w-full px-3 py-2 rounded-xl border border-slate-300 focus:ring-2 focus:ring-sky-500 focus:outline-none text-xs font-semibold text-slate-800 bg-white">
+                    </div>
+                    <div class="md:col-span-2">
+                        <label class="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1">
+                            <i class="fa-solid fa-book-open text-indigo-600 mr-1"></i> Materi Pembelajaran / Pokok Bahasan
+                        </label>
+                        <input type="text" id="attMaterialInput" oninput="saveAttendanceState()" placeholder="Contoh: Pengenalan Serat Tekstil / Algoritma Pemrograman" class="w-full px-3 py-2 rounded-xl border border-slate-300 focus:ring-2 focus:ring-sky-500 focus:outline-none text-xs text-slate-800 bg-white">
+                    </div>
+                </div>
+            </div>
+
+            <!-- Attendance Summary Stats -->
+            <div class="grid grid-cols-2 md:grid-cols-4 gap-4">
+                <div class="bg-white p-4 rounded-2xl border border-emerald-200 bg-emerald-50/30 shadow-sm flex items-center gap-3">
+                    <div class="w-10 h-10 rounded-xl bg-emerald-100 text-emerald-600 flex items-center justify-center font-bold text-lg">
+                        <i class="fa-solid fa-user-check"></i>
+                    </div>
+                    <div>
+                        <p class="text-xs text-emerald-800 font-medium">Hadir</p>
+                        <h3 class="text-xl font-black text-emerald-700" id="attStatHadir">0</h3>
+                    </div>
+                </div>
+                <div class="bg-white p-4 rounded-2xl border border-amber-200 bg-amber-50/30 shadow-sm flex items-center gap-3">
+                    <div class="w-10 h-10 rounded-xl bg-amber-100 text-amber-600 flex items-center justify-center font-bold text-lg">
+                        <i class="fa-solid fa-envelope-open-text"></i>
+                    </div>
+                    <div>
+                        <p class="text-xs text-amber-800 font-medium">Izin</p>
+                        <h3 class="text-xl font-black text-amber-700" id="attStatIzin">0</h3>
+                    </div>
+                </div>
+                <div class="bg-white p-4 rounded-2xl border border-sky-200 bg-sky-50/30 shadow-sm flex items-center gap-3">
+                    <div class="w-10 h-10 rounded-xl bg-sky-100 text-sky-600 flex items-center justify-center font-bold text-lg">
+                        <i class="fa-solid fa-notes-medical"></i>
+                    </div>
+                    <div>
+                        <p class="text-xs text-sky-800 font-medium">Sakit</p>
+                        <h3 class="text-xl font-black text-sky-700" id="attStatSakit">0</h3>
+                    </div>
+                </div>
+                <div class="bg-white p-4 rounded-2xl border border-rose-200 bg-rose-50/30 shadow-sm flex items-center gap-3">
+                    <div class="w-10 h-10 rounded-xl bg-rose-100 text-rose-600 flex items-center justify-center font-bold text-lg">
+                        <i class="fa-solid fa-user-xmark"></i>
+                    </div>
+                    <div>
+                        <p class="text-xs text-rose-800 font-medium">Tidak Hadir (Alpa)</p>
+                        <h3 class="text-xl font-black text-rose-700" id="attStatAlpa">0</h3>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Attendance Table Container -->
+            <div class="bg-white rounded-2xl border border-slate-200 overflow-hidden shadow-sm">
+                <div class="p-4 border-b border-slate-100 flex flex-col sm:flex-row justify-between items-center gap-3">
+                    <div class="relative w-full sm:w-80">
+                        <i class="fa-solid fa-magnifying-glass absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400"></i>
+                        <input type="text" id="attSearchInput" oninput="renderAttendance()" placeholder="Cari nama murid..." 
+                            class="w-full pl-10 pr-4 py-2 rounded-xl border border-slate-200 focus:outline-none focus:ring-2 focus:ring-sky-500 focus:border-sky-500 text-xs">
+                    </div>
+                    <span class="text-xs text-slate-400 font-medium">Klik pada status untuk mengubah kehadiran siswa</span>
+                </div>
+
+                <div class="overflow-x-auto">
+                    <table class="w-full text-left border-collapse text-sm">
+                        <thead>
+                            <tr class="bg-slate-50 border-b border-slate-200 text-slate-500 text-xs uppercase font-semibold">
+                                <th class="p-3.5 text-center w-12">No</th>
+                                <th class="p-3.5">Nama Murid</th>
+                                <th class="p-3.5 w-28">NISN</th>
+                                <th class="p-3.5 text-center w-80">Status Kehadiran</th>
+                                <th class="p-3.5">Catatan Khusus</th>
+                            </tr>
+                        </thead>
+                        <tbody id="attendanceTableBody" class="divide-y divide-slate-100">
+                            <!-- Dynamic Attendance Rows -->
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+
+    </main>
+
+    <!-- Modal: Custom Point Adjustment -->
+    <div id="customPointModal" class="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-50 flex items-center justify-center p-4 hidden">
+        <div class="bg-white rounded-3xl max-w-md w-full p-6 shadow-2xl border border-slate-100 animate-pop space-y-4">
+            <div class="flex justify-between items-center pb-3 border-b border-slate-100">
+                <h3 class="font-bold text-lg text-slate-800" id="customStudentName">Tambah / Kurang Poin</h3>
+                <button onclick="closeCustomModal()" class="text-slate-400 hover:text-slate-600 p-1 rounded-lg">
+                    <i class="fa-solid fa-xmark text-xl"></i>
+                </button>
+            </div>
+            <input type="hidden" id="customStudentId">
+            <div>
+                <label class="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1">Jumlah Poin (+/-)</label>
+                <input type="number" id="customPointValue" value="1" class="w-full px-4 py-2.5 rounded-xl border border-slate-300 focus:ring-2 focus:ring-sky-500 text-sm font-bold text-slate-800">
+            </div>
+            <div>
+                <label class="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1">Keterangan Aktivitas</label>
+                <input type="text" id="customPointNote" placeholder="Contoh: Menjawab Pertanyaan Sulit" class="w-full px-4 py-2.5 rounded-xl border border-slate-300 focus:ring-2 focus:ring-sky-500 text-xs text-slate-800">
+            </div>
+            <div class="flex justify-end gap-2 pt-2">
+                <button onclick="closeCustomModal()" class="px-4 py-2 rounded-xl text-xs font-bold text-slate-600 hover:bg-slate-100">Batal</button>
+                <button onclick="submitCustomPoint()" class="px-5 py-2 bg-sky-600 hover:bg-sky-700 text-white rounded-xl text-xs font-bold shadow-md">Simpan Poin</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal: History Log -->
+    <div id="historyModal" class="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-50 flex items-center justify-center p-4 hidden">
+        <div class="bg-white rounded-3xl max-w-lg w-full p-6 shadow-2xl border border-slate-100 animate-pop space-y-4 max-h-[85vh] flex flex-col">
+            <div class="flex justify-between items-center pb-3 border-b border-slate-100">
+                <div class="flex items-center gap-2">
+                    <i class="fa-solid fa-clock-rotate-left text-indigo-600"></i>
+                    <h3 class="font-bold text-lg text-slate-800">Riwayat Perubahan Poin</h3>
+                </div>
+                <button onclick="closeHistoryModal()" class="text-slate-400 hover:text-slate-600 p-1 rounded-lg">
+                    <i class="fa-solid fa-xmark text-xl"></i>
+                </button>
+            </div>
+            <div id="historyList" class="flex-1 overflow-y-auto space-y-2 pr-1 min-h-[200px]">
+                <!-- History Items Dynamic -->
+            </div>
+            <div class="flex justify-between items-center pt-3 border-t border-slate-100 text-xs">
+                <button onclick="clearHistory()" class="text-rose-600 hover:underline font-semibold">Bersihkan Riwayat</button>
+                <button onclick="closeHistoryModal()" class="px-4 py-2 bg-slate-200 text-slate-800 font-bold rounded-xl">Tutup</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal: Google Sheets Sync Settings & Tutorial -->
+    <div id="sheetsModal" class="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-50 flex items-center justify-center p-4 hidden">
+        <div class="bg-white rounded-3xl max-w-2xl w-full p-6 sm:p-8 shadow-2xl border border-slate-100 max-h-[90vh] overflow-y-auto animate-pop">
+            <div class="flex justify-between items-center mb-5 pb-3 border-b border-slate-100">
+                <div class="flex items-center gap-3">
+                    <div class="w-10 h-10 rounded-xl bg-emerald-100 text-emerald-600 flex items-center justify-center text-lg">
+                        <i class="fa-solid fa-file-excel"></i>
+                    </div>
+                    <div>
+                        <h3 class="font-bold text-lg text-slate-800">Integrasi Google Spreadsheet</h3>
+                        <p class="text-xs text-slate-500">Simpan Otomatis Poin & Presensi Per-Tanggal dan Per-Kelas</p>
+                    </div>
+                </div>
+                <button onclick="closeSheetsModal()" class="text-slate-400 hover:text-slate-600 p-2 rounded-lg">
+                    <i class="fa-solid fa-xmark text-xl"></i>
+                </button>
+            </div>
+
+            <div class="space-y-4 text-sm text-slate-600">
+                <div>
+                    <label class="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1">Google Apps Script Web App URL</label>
+                    <input type="url" id="scriptUrlInput" placeholder="https://script.google.com/macros/s/.../exec" 
+                        class="w-full px-4 py-2.5 rounded-xl border border-slate-300 focus:ring-2 focus:ring-emerald-500 focus:outline-none text-xs font-mono">
+                    <p class="text-[11px] text-slate-400 mt-1">Masukkan Web App URL dari Google Apps Script untuk otomatis menyinkronkan data.</p>
+                </div>
+
+                <div class="bg-emerald-50 border border-emerald-200 rounded-2xl p-4 space-y-2">
+                    <h4 class="font-bold text-emerald-900 flex items-center gap-2 text-xs uppercase tracking-wider">
+                        <i class="fa-solid fa-circle-info"></i> Kode Apps Script Terbaru (Mendukung Poin + Presensi):
+                    </h4>
+                    <p class="text-xs text-emerald-800">Salin kode script di bawah ini ke menu **Apps Script** Google Spreadsheet Anda:</p>
+
+                    <div class="relative mt-2">
+                        <pre class="bg-slate-900 text-emerald-400 p-3 rounded-xl text-[11px] overflow-x-auto font-mono max-h-48 leading-snug" id="appScriptCode">
+function doPost(e) {
+  var data = JSON.parse(e.postData.contents);
+  var ss = SpreadsheetApp.getActiveSpreadsheet();
+  
+  if (data.type === 'attendance') {
+    // Sheet khusus presensi per kelas & tanggal (Contoh: Absen X Tekstil A - 2026-09-08)
+    var sheetName = "Absen " + data.className + " (" + data.date + ")";
+    var sheet = ss.getSheetByName(sheetName);
+    if (!sheet) { sheet = ss.insertSheet(sheetName); }
+    sheet.clear();
+    sheet.appendRow(["SMKN 5 YOGYAKARTA - REKAP PRESENSI KELAS"]);
+    sheet.appendRow(["Kelas:", data.className]);
+    sheet.appendRow(["Tanggal:", data.date]);
+    sheet.appendRow(["Materi:", data.material || "-"]);
+    sheet.appendRow([]);
+    sheet.appendRow(["No", "NISN", "Nama Murid", "Status Kehadiran", "Catatan"]);
+    data.records.forEach(function(r, index) {
+      sheet.appendRow([index + 1, r.nisn, r.name, r.status, r.note || "-"]);
+    });
+  } else {
+    // Sheet Leaderboard Poin Per Kelas
+    var sheet = ss.getSheetByName(data.className);
+    if (!sheet) { sheet = ss.insertSheet(data.className); }
+    sheet.clear();
+    sheet.appendRow(["No", "NISN", "Nama Murid", "Total Poin", "Terakhir Diperbarui"]);
+    data.students.forEach(function(s, index) {
+      sheet.appendRow([index + 1, s.nisn, s.name, s.points, s.lastUpdated || new Date().toLocaleString("id-ID")]);
+    });
+  }
+  return ContentService.createTextOutput(JSON.stringify({status: "success"}))
+    .setMimeType(ContentService.MimeType.JSON);
+}</pre>
+                        <button onclick="copyAppsScript()" class="absolute top-2 right-2 bg-white/20 hover:bg-white/30 text-white px-2 py-1 rounded text-[10px] font-semibold flex items-center gap-1 backdrop-blur-sm">
+                            <i class="fa-solid fa-copy"></i> Salin Kode
+                        </button>
+                    </div>
+                </div>
+
+                <div class="flex justify-end gap-2 pt-3">
+                    <button onclick="saveSheetsUrl()" class="px-5 py-2.5 bg-emerald-600 hover:bg-emerald-700 text-white font-bold rounded-xl shadow-md transition text-xs flex items-center gap-2">
+                        <i class="fa-solid fa-floppy-disk"></i> Simpan URL & Sinkronkan
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Notification Toast Container -->
+    <div id="toastContainer" class="fixed bottom-5 right-5 z-50 flex flex-col gap-2 pointer-events-none"></div>
+
+    <script>
+        // State Management
+        let mainTab = 'leaderboard'; // 'leaderboard' or 'attendance'
+        let currentClass = 'X_TEKSTIL_A'; // 'X_TEKSTIL_A' or 'X_LOGAM_B'
+        let viewMode = 'grid'; // 'grid' or 'list'
+        let audioEnabled = true;
+        let googleSheetsUrl = localStorage.getItem('smk5_sheets_url') || '';
+
+        // Web Audio Synthesizer
+        function playSound(type = 'add') {
+            if (!audioEnabled) return;
+            try {
+                const AudioCtx = window.AudioContext || window.webkitAudioContext;
+                if (!AudioCtx) return;
+                const audioCtx = new AudioCtx();
+                const osc = audioCtx.createOscillator();
+                const gain = audioCtx.createGain();
+                
+                osc.type = 'sine';
+                if (type === 'add') {
+                    osc.frequency.setValueAtTime(587.33, audioCtx.currentTime); // D5
+                    osc.frequency.exponentialRampToValueAtTime(880, audioCtx.currentTime + 0.15); // A5
+                    gain.gain.setValueAtTime(0.15, audioCtx.currentTime);
+                    gain.gain.exponentialRampToValueAtTime(0.01, audioCtx.currentTime + 0.15);
+                } else {
+                    osc.frequency.setValueAtTime(300, audioCtx.currentTime);
+                    osc.frequency.exponentialRampToValueAtTime(150, audioCtx.currentTime + 0.2);
+                    gain.gain.setValueAtTime(0.2, audioCtx.currentTime);
+                    gain.gain.exponentialRampToValueAtTime(0.01, audioCtx.currentTime + 0.2);
+                }
+                osc.connect(gain);
+                gain.connect(audioCtx.destination);
+                osc.start();
+                osc.stop(audioCtx.currentTime + 0.2);
+            } catch (e) {
+                console.log('Audio disabled by browser', e);
+            }
+        }
+
+        function toggleAudio() {
+            audioEnabled = !audioEnabled;
+            const btn = document.getElementById('audioToggleBtn');
+            const icon = document.getElementById('audioIcon');
+            if (audioEnabled) {
+                icon.className = "fa-solid fa-volume-high text-sky-600";
+                showToast('Efek suara diaktifkan', 'info');
+            } else {
+                icon.className = "fa-solid fa-volume-xmark text-slate-400";
+                showToast('Efek suara dimatikan', 'info');
+            }
+        }
+
+        // Attendance Data Store
+        let attendanceData = {};
+
+        // Class Configurations
+        const classConfig = {
+            'X_TEKSTIL_A': {
+                name: 'X Tekstil A',
+                subject: 'KKA',
+                color: 'sky'
+            },
+            'X_LOGAM_B': {
+                name: 'X Logam B',
+                subject: 'Informatika',
+                color: 'indigo'
+            }
+        };
+
+        // 36 Student Names Generator (X Tekstil A)
+        const rawTekstilStudents = [
+            "Achmad Bagus Pratama", "Adinda Putri Rahmadani", "Ahmad Fauzi Ardiansyah", "Anisa Nur Rahma", 
+            "Arya Dwi Satria", "Bayu Setiawan", "Bunga Permata Sari", "Candra Wijaya", 
+            "Daffa Al Ghifari", "Dian Sastro Wardani", "Dimas Anggara Putra", "Eka Nur Lestari", 
+            "Farhan Ramadhan", "Fitriani Utami", "Gilang Perdana", "Hana Salsabila", 
+            "Indah Pertiwi", "Joko Prasetyo", "Kartika Sari", "Kevin Sanjaya", 
+            "Larasati Dewi", "M. Rizky Febrian", "Maya Indah Lestari", "Naufal Azhar", 
+            "Nurul Hidayah", "Putri Ayu Ningrum", "Raditya Aris Munandar", "Rahmat Hidayat", 
+            "Rina Amalia", "Rizky Kurniawan", "Siti Nurhaliza", "Sri Wahyuni", 
+            "Tri Sutrisno", "Vina Panduwinata", "Yoga Pratama", "Zulfikar Ali"
+        ];
+
+        // 36 Student Names Generator (X Logam B)
+        const rawLogamStudents = [
+            "Abidzar Ghifari", "Ade Kurniawan", "Aditya Nur Hidayat", "Ageng Prasetyo", 
+            "Ahmad Dahlan", "Aldi Taher Santoso", "Alfian Syahputra", "Alim Nugroho", 
+            "Aulia Rahman", "Bagas Kara", "Bambang Pamungkas", "Bagus Subagyo", 
+            "Danang Sutrisno", "Denis Candra", "Dicky Wahyudi", "Fajar Nugraha", 
+            "Fani Septian", "Galang Rambu Anarki", "Ghozi Al-Fatih", "Handoko Wijaya", 
+            "Herdian Syah", "Ibnu Sina", "Iqbal Ramadhan", "Irfan Hakim", 
+            "Kelvin Tanujaya", "Lukman Hakim", "M. Fahrul Rozi", "Muhammad Iqbal", 
+            "Nanda Pratama", "Oscar Ziyad", "Panji Tengkorak", "Rendy Juliansyah", 
+            "Ricky Harun", "Teguh Karya", "Yudi Santoso", "Zaenal Arifin"
+        ];
+
+        let studentsData = {
+            'X_TEKSTIL_A': [],
+            'X_LOGAM_B': []
+        };
+
+        let historyLog = [];
+
+        function generateDefaultStudents() {
+            studentsData['X_TEKSTIL_A'] = rawTekstilStudents.map((name, i) => ({
+                id: `tekstil_${i + 1}`,
+                nisn: `008${1029384 + i}`,
+                name: name,
+                points: 0,
+                lastUpdated: ''
+            }));
+
+            studentsData['X_LOGAM_B'] = rawLogamStudents.map((name, i) => ({
+                id: `logam_${i + 1}`,
+                nisn: `008${2029384 + i}`,
+                name: name,
+                points: 0,
+                lastUpdated: ''
+            }));
+
+            saveToLocalStorage();
+        }
+
+        function saveToLocalStorage() {
+            localStorage.setItem('smk5_leaderboard_data', JSON.stringify(studentsData));
+            localStorage.setItem('smk5_history_log', JSON.stringify(historyLog));
+        }
+
+        function initData() {
+            const savedData = localStorage.getItem('smk5_leaderboard_data');
+            if (savedData) {
+                try {
+                    studentsData = JSON.parse(savedData);
+                } catch (e) {
+                    generateDefaultStudents();
+                }
+            } else {
+                generateDefaultStudents();
+            }
+
+            const savedHistory = localStorage.getItem('smk5_history_log');
+            if (savedHistory) {
+                try { historyLog = JSON.parse(savedHistory); } catch(e){}
+            }
+
+            const savedAttendance = localStorage.getItem('smk5_attendance_data');
+            if (savedAttendance) {
+                try { attendanceData = JSON.parse(savedAttendance); } catch(e){}
+            }
+
+            if (googleSheetsUrl) {
+                document.getElementById('scriptUrlInput').value = googleSheetsUrl;
+            }
+
+            const dateInput = document.getElementById('attDateInput');
+            if (dateInput) dateInput.value = getTodayDateString();
+
+            renderAll();
+        }
+
+        // --- ATTENDANCE MANAGEMENT FUNCTIONS ---
+        function getTodayDateString() {
+            const today = new Date();
+            const year = today.getFullYear();
+            const month = String(today.getMonth() + 1).padStart(2, '0');
+            const day = String(today.getDate()).padStart(2, '0');
+            return `${year}-${month}-${day}`;
+        }
+
+        function getSelectedDate() {
+            const dateInput = document.getElementById('attDateInput');
+            return dateInput && dateInput.value ? dateInput.value : getTodayDateString();
+        }
+
+        function ensureAttendanceStructure(className, dateStr) {
+            if (!attendanceData[className]) attendanceData[className] = {};
+            if (!attendanceData[className][dateStr]) {
+                attendanceData[className][dateStr] = {
+                    material: '',
+                    records: {}
+                };
+
+                const students = studentsData[className] || [];
+                students.forEach(s => {
+                    attendanceData[className][dateStr].records[s.id] = {
+                        status: 'Hadir',
+                        note: ''
+                    };
+                });
+            }
+        }
+
+        function onAttendanceDateChange() {
+            renderAttendance();
+        }
+
+        function setAttendanceStatus(studentId, status) {
+            const dateStr = getSelectedDate();
+            ensureAttendanceStructure(currentClass, dateStr);
+
+            attendanceData[currentClass][dateStr].records[studentId].status = status;
+            saveAttendanceState();
+            renderAttendance();
+            playSound('add');
+        }
+
+        function setAttendanceNote(studentId, note) {
+            const dateStr = getSelectedDate();
+            ensureAttendanceStructure(currentClass, dateStr);
+
+            attendanceData[currentClass][dateStr].records[studentId].note = note;
+            saveAttendanceState();
+        }
+
+        function markAllHadir() {
+            const dateStr = getSelectedDate();
+            ensureAttendanceStructure(currentClass, dateStr);
+
+            const students = studentsData[currentClass] || [];
+            students.forEach(s => {
+                attendanceData[currentClass][dateStr].records[s.id].status = 'Hadir';
+            });
+
+            saveAttendanceState();
+            renderAttendance();
+            showToast('Semua murid ditandai HADIR', 'success');
+        }
+
+        function saveAttendanceState() {
+            const dateStr = getSelectedDate();
+            ensureAttendanceStructure(currentClass, dateStr);
+
+            const materialInput = document.getElementById('attMaterialInput');
+            if (materialInput) {
+                attendanceData[currentClass][dateStr].material = materialInput.value;
+            }
+
+            localStorage.setItem('smk5_attendance_data', JSON.stringify(attendanceData));
+        }
+
+        function renderAttendance() {
+            const dateStr = getSelectedDate();
+            ensureAttendanceStructure(currentClass, dateStr);
+
+            const currentObj = attendanceData[currentClass][dateStr];
+            document.getElementById('attClassTag').innerText = classConfig[currentClass].name;
+            document.getElementById('attMaterialInput').value = currentObj.material || '';
+
+            const students = studentsData[currentClass] || [];
+            const query = (document.getElementById('attSearchInput')?.value || '').toLowerCase();
+            const tbody = document.getElementById('attendanceTableBody');
+
+            let filteredStudents = students;
+            if (query) {
+                filteredStudents = students.filter(s => s.name.toLowerCase().includes(query) || s.nisn.includes(query));
+            }
+
+            let countHadir = 0, countIzin = 0, countSakit = 0, countAlpa = 0;
+            students.forEach(s => {
+                const rec = currentObj.records[s.id] || { status: 'Hadir' };
+                if (rec.status === 'Hadir') countHadir++;
+                else if (rec.status === 'Izin') countIzin++;
+                else if (rec.status === 'Sakit') countSakit++;
+                else if (rec.status === 'Tidak Hadir') countAlpa++;
+            });
+
+            document.getElementById('attStatHadir').innerText = countHadir;
+            document.getElementById('attStatIzin').innerText = countIzin;
+            document.getElementById('attStatSakit').innerText = countSakit;
+            document.getElementById('attStatAlpa').innerText = countAlpa;
+
+            let html = '';
+            filteredStudents.forEach((student, idx) => {
+                const rec = currentObj.records[student.id] || { status: 'Hadir', note: '' };
+                const isHadir = rec.status === 'Hadir';
+                const isIzin = rec.status === 'Izin';
+                const isSakit = rec.status === 'Sakit';
+                const isAlpa = rec.status === 'Tidak Hadir';
+
+                html += `
+                    <tr class="hover:bg-slate-50/80 transition">
+                        <td class="p-3.5 text-center font-bold text-slate-500 text-xs">${idx + 1}</td>
+                        <td class="p-3.5 font-bold text-slate-800">
+                            <div class="flex items-center gap-2">
+                                <div class="w-7 h-7 rounded-lg bg-sky-100 text-sky-700 flex items-center justify-center font-bold text-xs">
+                                    ${getInitials(student.name)}
+                                </div>
+                                <span>${student.name}</span>
+                            </div>
+                        </td>
+                        <td class="p-3.5 text-slate-500 font-mono text-xs">${student.nisn}</td>
+                        <td class="p-3.5 text-center">
+                            <div class="inline-flex rounded-xl p-1 bg-slate-100 border border-slate-200 gap-1 text-xs font-bold">
+                                <button onclick="setAttendanceStatus('${student.id}', 'Hadir')" class="px-2.5 py-1 rounded-lg transition ${isHadir ? 'bg-emerald-600 text-white shadow-sm' : 'text-slate-600 hover:text-emerald-700'}">
+                                    🟢 Hadir
+                                </button>
+                                <button onclick="setAttendanceStatus('${student.id}', 'Izin')" class="px-2.5 py-1 rounded-lg transition ${isIzin ? 'bg-amber-500 text-white shadow-sm' : 'text-slate-600 hover:text-amber-700'}">
+                                    🟡 Izin
+                                </button>
+                                <button onclick="setAttendanceStatus('${student.id}', 'Sakit')" class="px-2.5 py-1 rounded-lg transition ${isSakit ? 'bg-sky-600 text-white shadow-sm' : 'text-slate-600 hover:text-sky-700'}">
+                                    🔵 Sakit
+                                </button>
+                                <button onclick="setAttendanceStatus('${student.id}', 'Tidak Hadir')" class="px-2.5 py-1 rounded-lg transition ${isAlpa ? 'bg-rose-600 text-white shadow-sm' : 'text-slate-600 hover:text-rose-700'}">
+                                    🔴 Alpa
+                                </button>
+                            </div>
+                        </td>
+                        <td class="p-3.5">
+                            <input type="text" value="${rec.note || ''}" onchange="setAttendanceNote('${student.id}', this.value)" placeholder="Catatan (opsional)..." class="w-full px-2.5 py-1 rounded-lg border border-slate-200 focus:ring-2 focus:ring-sky-500 focus:outline-none text-xs">
+                        </td>
+                    </tr>
+                `;
+            });
+
+            tbody.innerHTML = html;
+        }
+
+        // --- LEADERBOARD FUNCTIONS ---
+        function switchMainTab(tab) {
+            mainTab = tab;
+            const secLeaderboard = document.getElementById('sectionLeaderboard');
+            const secAttendance = document.getElementById('sectionAttendance');
+            const btnLeaderboard = document.getElementById('navBtnLeaderboard');
+            const btnAttendance = document.getElementById('navBtnAttendance');
+
+            if (tab === 'leaderboard') {
+                secLeaderboard.classList.remove('hidden');
+                secAttendance.classList.add('hidden');
+                btnLeaderboard.className = "px-3 py-1.5 rounded-lg transition-all text-white bg-sky-600 shadow font-bold";
+                btnAttendance.className = "px-3 py-1.5 rounded-lg transition-all text-sky-200 hover:text-white hover:bg-white/10 font-semibold";
+                renderAll();
+            } else {
+                secAttendance.classList.remove('hidden');
+                secLeaderboard.classList.add('hidden');
+                btnAttendance.className = "px-3 py-1.5 rounded-lg transition-all text-white bg-sky-600 shadow font-bold";
+                btnLeaderboard.className = "px-3 py-1.5 rounded-lg transition-all text-sky-200 hover:text-white hover:bg-white/10 font-semibold";
+                renderAttendance();
+            }
+        }
+
+        function switchClass(className) {
+            currentClass = className;
+            const btnTekstil = document.getElementById('btnClassTekstil');
+            const btnLogam = document.getElementById('btnClassLogam');
+            const classTag = document.getElementById('classTag');
+            const subjectTag = document.getElementById('subjectTag');
+            const currentSubjectBadge = document.getElementById('currentSubjectBadge');
+
+            if (className === 'X_TEKSTIL_A') {
+                btnTekstil.className = "px-3 py-1.5 rounded-lg transition-all duration-200 flex items-center gap-1.5 text-white bg-sky-600 shadow-sm font-semibold";
+                btnLogam.className = "px-3 py-1.5 rounded-lg transition-all duration-200 flex items-center gap-1.5 text-sky-200 hover:text-white hover:bg-white/10";
+                if (classTag) classTag.innerText = "X Tekstil A";
+                if (subjectTag) subjectTag.innerText = "Mata Pelajaran: KKA";
+                if (currentSubjectBadge) currentSubjectBadge.innerText = "KKA";
+            } else {
+                btnLogam.className = "px-3 py-1.5 rounded-lg transition-all duration-200 flex items-center gap-1.5 text-white bg-sky-600 shadow-sm font-semibold";
+                btnTekstil.className = "px-3 py-1.5 rounded-lg transition-all duration-200 flex items-center gap-1.5 text-sky-200 hover:text-white hover:bg-white/10";
+                if (classTag) classTag.innerText = "X Logam B";
+                if (subjectTag) subjectTag.innerText = "Mata Pelajaran: Informatika";
+                if (currentSubjectBadge) currentSubjectBadge.innerText = "INFORMATIKA";
+            }
+
+            if (mainTab === 'leaderboard') {
+                renderAll();
+            } else {
+                renderAttendance();
+            }
+        }
+
+        function setViewMode(mode) {
+            viewMode = mode;
+            const btnGrid = document.getElementById('btnViewGrid');
+            const btnList = document.getElementById('btnViewList');
+            if (mode === 'grid') {
+                btnGrid.className = "p-2 rounded-lg text-sky-600 bg-white shadow-sm transition";
+                btnList.className = "p-2 rounded-lg text-slate-500 hover:text-slate-800 transition";
+            } else {
+                btnList.className = "p-2 rounded-lg text-sky-600 bg-white shadow-sm transition";
+                btnGrid.className = "p-2 rounded-lg text-slate-500 hover:text-slate-800 transition";
+            }
+            renderLeaderboard();
+        }
+
+        function changePoint(studentId, delta, note = '') {
+            const student = studentsData[currentClass].find(s => s.id === studentId);
+            if (!student) return;
+
+            student.points += delta;
+            student.lastUpdated = new Date().toLocaleTimeString('id-ID', {hour: '2-digit', minute:'2-digit'});
+
+            playSound(delta > 0 ? 'add' : 'sub');
+
+            const logEntry = {
+                id: Date.now(),
+                class: classConfig[currentClass].name,
+                studentName: student.name,
+                delta: delta,
+                note: note || (delta > 0 ? 'Keaktifan Kelas (+1)' : 'Pengurangan Poin (-1)'),
+                time: new Date().toLocaleTimeString('id-ID', {hour: '2-digit', minute:'2-digit'})
+            };
+            historyLog.unshift(logEntry);
+            if (historyLog.length > 50) historyLog.pop();
+
+            saveToLocalStorage();
+            renderAll();
+
+            if (googleSheetsUrl) {
+                syncToGoogleSheetsSilent();
+            }
+
+            const sign = delta > 0 ? '+' : '';
+            showToast(`${student.name}: ${sign}${delta} Poin`, delta > 0 ? 'success' : 'warning');
+        }
+
+        function getStudentRank(studentId) {
+            const sorted = [...studentsData[currentClass]].sort((a, b) => b.points - a.points || a.name.localeCompare(b.name));
+            return sorted.findIndex(s => s.id === studentId) + 1;
+        }
+
+        function getInitials(name) {
+            if (!name) return '??';
+            const parts = name.split(' ');
+            if (parts.length === 1) return parts[0].substring(0, 2).toUpperCase();
+            return (parts[0][0] + parts[1][0]).toUpperCase();
+        }
+
+        function openCustomModal(studentId) {
+            const student = studentsData[currentClass].find(s => s.id === studentId);
+            if (!student) return;
+
+            document.getElementById('customStudentId').value = studentId;
+            document.getElementById('customStudentName').innerText = student.name;
+            document.getElementById('customPointValue').value = 1;
+            document.getElementById('customPointNote').value = 'Bertanya di Kelas';
+            document.getElementById('customPointModal').classList.remove('hidden');
+        }
+
+        function closeCustomModal() {
+            document.getElementById('customPointModal').classList.add('hidden');
+        }
+
+        function submitCustomPoint() {
+            const studentId = document.getElementById('customStudentId').value;
+            const delta = parseInt(document.getElementById('customPointValue').value) || 0;
+            const note = document.getElementById('customPointNote').value || 'Penyesuaian Poin';
+
+            if (delta !== 0) {
+                changePoint(studentId, delta, note);
+            }
+            closeCustomModal();
+        }
+
+        function resetClassPoints() {
+            const className = classConfig[currentClass].name;
+            if (confirm(`Apakah Anda yakin ingin MERESET SEMUA POIN untuk ${className}? Tindakan ini tidak dapat dibatalkan.`)) {
+                studentsData[currentClass].forEach(s => {
+                    s.points = 0;
+                    s.lastUpdated = new Date().toLocaleTimeString('id-ID', {hour: '2-digit', minute:'2-digit'});
+                });
+                saveToLocalStorage();
+                renderAll();
+                showToast(`Poin ${className} berhasil direset`, 'info');
+            }
+        }
+
+        function renderStats() {
+            const students = studentsData[currentClass] || [];
+            const totalStudents = students.length;
+            const totalPoints = students.reduce((acc, curr) => acc + curr.points, 0);
+            const avgPoints = totalStudents > 0 ? (totalPoints / totalStudents).toFixed(1) : '0.0';
+            const maxPoints = Math.max(0, ...students.map(s => s.points));
+
+            document.getElementById('statTotalStudents').innerText = totalStudents;
+            document.getElementById('statTotalPoints').innerText = totalPoints;
+            document.getElementById('statAvgPoints').innerText = avgPoints;
+            document.getElementById('statMaxPoints').innerText = maxPoints;
+        }
+
+        function renderPodium() {
+            const container = document.getElementById('podiumContainer');
+            const sorted = [...studentsData[currentClass]].sort((a, b) => b.points - a.points || a.name.localeCompare(b.name));
+            
+            const top1 = sorted[0];
+            const top2 = sorted[1];
+            const top3 = sorted[2];
+
+            let html = '';
+
+            // Rank 2 (Silver)
+            if (top2) {
+                html += `
+                    <div class="podium-2 flex-1 flex flex-col items-center">
+                        <div class="text-center mb-2">
+                            <span class="w-8 h-8 rounded-full bg-slate-300 text-slate-900 font-bold text-xs inline-flex items-center justify-center border-2 border-white shadow">2</span>
+                            <p class="font-bold text-xs sm:text-sm mt-1 truncate max-w-[100px] sm:max-w-[120px]">${top2.name}</p>
+                            <p class="text-amber-400 text-xs font-black">${top2.points} Poin</p>
+                        </div>
+                        <div class="w-full bg-slate-700/80 rounded-t-2xl border-t-2 border-slate-400 p-3 flex items-center justify-center">
+                            <i class="fa-solid fa-medal text-slate-300 text-xl"></i>
+                        </div>
+                    </div>
+                `;
+            }
+
+            // Rank 1 (Gold)
+            if (top1) {
+                html += `
+                    <div class="podium-1 flex-1 flex flex-col items-center">
+                        <div class="text-center mb-2">
+                            <span class="w-10 h-10 rounded-full bg-amber-400 text-slate-900 font-black text-sm inline-flex items-center justify-center border-2 border-amber-200 shadow-lg pulse-glow">1</span>
+                            <p class="font-extrabold text-sm sm:text-base mt-1 truncate max-w-[110px] sm:max-w-[140px] text-amber-300">${top1.name}</p>
+                            <p class="text-amber-400 text-sm font-black">${top1.points} Poin</p>
+                        </div>
+                        <div class="w-full bg-amber-500/30 rounded-t-2xl border-t-2 border-amber-400 p-4 flex items-center justify-center">
+                            <i class="fa-solid fa-crown text-amber-400 text-3xl"></i>
+                        </div>
+                    </div>
+                `;
+            }
+
+            // Rank 3 (Bronze)
+            if (top3) {
+                html += `
+                    <div class="podium-3 flex-1 flex flex-col items-center">
+                        <div class="text-center mb-2">
+                            <span class="w-8 h-8 rounded-full bg-amber-700 text-white font-bold text-xs inline-flex items-center justify-center border-2 border-white shadow">3</span>
+                            <p class="font-bold text-xs sm:text-sm mt-1 truncate max-w-[100px] sm:max-w-[120px]">${top3.name}</p>
+                            <p class="text-amber-400 text-xs font-black">${top3.points} Poin</p>
+                        </div>
+                        <div class="w-full bg-slate-800/80 rounded-t-2xl border-t-2 border-amber-700 p-3 flex items-center justify-center">
+                            <i class="fa-solid fa-award text-amber-600 text-xl"></i>
+                        </div>
+                    </div>
+                `;
+            }
+
+            container.innerHTML = html;
+        }
+
+        function renderLeaderboard() {
+            const container = document.getElementById('studentsContainer');
+            const query = (document.getElementById('searchInput')?.value || '').toLowerCase();
+            const sortBy = document.getElementById('sortSelect')?.value || 'rank';
+
+            let list = [...studentsData[currentClass]];
+
+            if (query) {
+                list = list.filter(s => s.name.toLowerCase().includes(query) || s.nisn.includes(query));
+            }
+
+            if (sortBy === 'rank') {
+                list.sort((a, b) => b.points - a.points || a.name.localeCompare(b.name));
+            } else if (sortBy === 'name') {
+                list.sort((a, b) => a.name.localeCompare(b.name));
+            } else if (sortBy === 'points-asc') {
+                list.sort((a, b) => a.points - b.points || a.name.localeCompare(b.name));
+            }
+
+            if (viewMode === 'grid') {
+                let html = '<div class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">';
+                list.forEach(student => {
+                    const rank = getStudentRank(student.id);
+                    let badgeClass = "bg-slate-100 text-slate-600";
+                    if (rank === 1) badgeClass = "bg-amber-400 text-slate-900 font-black";
+                    else if (rank === 2) badgeClass = "bg-slate-300 text-slate-900 font-bold";
+                    else if (rank === 3) badgeClass = "bg-amber-700 text-white font-bold";
+
+                    html += `
+                        <div class="bg-white rounded-2xl border border-slate-200/80 p-4 shadow-sm hover:shadow-md transition flex flex-col justify-between space-y-3 relative overflow-hidden group">
+                            <div class="flex items-start justify-between gap-2">
+                                <div class="flex items-center gap-2.5">
+                                    <div class="w-10 h-10 rounded-xl bg-sky-100 text-sky-800 flex items-center justify-center font-bold text-sm">
+                                        ${getInitials(student.name)}
+                                    </div>
+                                    <div>
+                                        <h4 class="font-bold text-slate-800 text-sm leading-snug line-clamp-1" title="${student.name}">${student.name}</h4>
+                                        <p class="text-[11px] text-slate-400 font-mono">NISN: ${student.nisn}</p>
+                                    </div>
+                                </div>
+                                <span class="px-2 py-0.5 rounded-lg text-xs font-bold ${badgeClass}">#${rank}</span>
+                            </div>
+
+                            <div class="flex items-center justify-between bg-slate-50 p-3 rounded-xl border border-slate-100">
+                                <div>
+                                    <p class="text-[10px] uppercase font-bold tracking-wider text-slate-400">Total Poin</p>
+                                    <p class="text-2xl font-black text-sky-700">${student.points}</p>
+                                </div>
+                                <div class="flex items-center gap-1.5">
+                                    <button onclick="changePoint('${student.id}', -1)" title="Kurangi 1 Poin" class="w-9 h-9 rounded-xl bg-rose-50 hover:bg-rose-100 text-rose-600 border border-rose-200 flex items-center justify-center font-bold text-base transition active:scale-95">
+                                        <i class="fa-solid fa-minus"></i>
+                                    </button>
+                                    <button onclick="changePoint('${student.id}', 1)" title="Tambah 1 Poin" class="w-10 h-10 rounded-xl bg-sky-600 hover:bg-sky-700 text-white shadow-md flex items-center justify-center font-bold text-lg transition active:scale-95">
+                                        <i class="fa-solid fa-plus"></i>
+                                    </button>
+                                </div>
+                            </div>
+
+                            <div class="flex justify-between items-center text-[11px] text-slate-400 pt-1">
+                                <span><i class="fa-solid fa-clock text-slate-300 mr-1"></i>${student.lastUpdated || 'Belum ada poin'}</span>
+                                <button onclick="openCustomModal('${student.id}')" class="text-sky-600 hover:underline font-medium">
+                                    <i class="fa-solid fa-pen-to-square mr-0.5"></i> Custom
+                                </button>
+                            </div>
+                        </div>
+                    `;
+                });
+                html += '</div>';
+                container.innerHTML = html;
+            } else {
+                let html = `
+                    <div class="bg-white rounded-2xl border border-slate-200/80 overflow-hidden shadow-sm">
+                        <table class="w-full text-left border-collapse text-sm">
+                            <thead>
+                                <tr class="bg-slate-50 border-b border-slate-200 text-slate-500 text-xs uppercase font-semibold">
+                                    <th class="p-3.5 text-center w-12">Rank</th>
+                                    <th class="p-3.5">Nama Murid</th>
+                                    <th class="p-3.5 w-28">NISN</th>
+                                    <th class="p-3.5 text-center w-28">Poin</th>
+                                    <th class="p-3.5 text-center w-36">Aksi Poin</th>
+                                </tr>
+                            </thead>
+                            <tbody class="divide-y divide-slate-100">
+                `;
+                list.forEach(student => {
+                    const rank = getStudentRank(student.id);
+                    html += `
+                        <tr class="hover:bg-slate-50 transition">
+                            <td class="p-3.5 text-center font-bold text-xs text-slate-500">#${rank}</td>
+                            <td class="p-3.5 font-bold text-slate-800">${student.name}</td>
+                            <td class="p-3.5 text-slate-500 font-mono text-xs">${student.nisn}</td>
+                            <td class="p-3.5 text-center font-extrabold text-sky-700 text-lg">${student.points}</td>
+                            <td class="p-3.5 text-center">
+                                <div class="flex items-center justify-center gap-1.5">
+                                    <button onclick="changePoint('${student.id}', -1)" class="w-8 h-8 rounded-lg bg-rose-50 text-rose-600 border border-rose-200 flex items-center justify-center font-bold text-xs">
+                                        <i class="fa-solid fa-minus"></i>
+                                    </button>
+                                    <button onclick="changePoint('${student.id}', 1)" class="w-8 h-8 rounded-lg bg-sky-600 text-white shadow flex items-center justify-center font-bold text-xs">
+                                        <i class="fa-solid fa-plus"></i>
+                                    </button>
+                                    <button onclick="openCustomModal('${student.id}')" class="p-1.5 text-slate-400 hover:text-sky-600">
+                                        <i class="fa-solid fa-pen-to-square"></i>
+                                    </button>
+                                </div>
+                            </td>
+                        </tr>
+                    `;
+                });
+                html += '</tbody></table></div>';
+                container.innerHTML = html;
+            }
+        }
+
+        function renderAll() {
+            renderStats();
+            renderPodium();
+            renderLeaderboard();
+        }
+
+        // --- HISTORY & SPREADSHEET SYNC ---
+        function openHistoryModal() {
+            renderHistoryList();
+            document.getElementById('historyModal').classList.remove('hidden');
+        }
+
+        function closeHistoryModal() {
+            document.getElementById('historyModal').classList.add('hidden');
+        }
+
+        function renderHistoryList() {
+            const container = document.getElementById('historyList');
+            const filtered = historyLog.filter(h => h.class === classConfig[currentClass].name);
+
+            if (filtered.length === 0) {
+                container.innerHTML = `<div class="text-center text-slate-400 py-6 text-xs">Belum ada riwayat aktivitas di kelas ini.</div>`;
+                return;
+            }
+
+            let html = '';
+            filtered.forEach(item => {
+                const isPositive = item.delta > 0;
+                html += `
+                    <div class="p-3 rounded-xl bg-slate-50 border border-slate-200/80 flex items-center justify-between text-xs">
+                        <div class="flex items-center gap-2.5">
+                            <span class="w-7 h-7 rounded-lg flex items-center justify-center font-bold text-xs ${isPositive ? 'bg-emerald-100 text-emerald-700' : 'bg-rose-100 text-rose-700'}">
+                                ${isPositive ? '+' + item.delta : item.delta}
+                            </span>
+                            <div>
+                                <p class="font-bold text-slate-800">${item.studentName}</p>
+                                <p class="text-[10px] text-slate-400">${item.note} • ${item.time}</p>
+                            </div>
+                        </div>
+                    </div>
+                `;
+            });
+
+            container.innerHTML = html;
+        }
+
+        function clearHistory() {
+            historyLog = historyLog.filter(h => h.class !== classConfig[currentClass].name);
+            saveToLocalStorage();
+            renderHistoryList();
+            showToast('Riwayat dibersihkan', 'info');
+        }
+
+        function openSheetsModal() {
+            document.getElementById('sheetsModal').classList.remove('hidden');
+        }
+
+        function closeSheetsModal() {
+            document.getElementById('sheetsModal').classList.add('hidden');
+        }
+
+        function saveSheetsUrl() {
+            const url = document.getElementById('scriptUrlInput').value.trim();
+            googleSheetsUrl = url;
+            localStorage.setItem('smk5_sheets_url', url);
+            closeSheetsModal();
+
+            if (url) {
+                syncToGoogleSheets();
+            } else {
+                showToast('URL Google Sheets disimpan', 'info');
+            }
+        }
+
+        function copyAppsScript() {
+            const code = document.getElementById('appScriptCode').innerText;
+            navigator.clipboard.writeText(code).then(() => {
+                showToast('Kode Apps Script berhasil disalin!', 'success');
+            }).catch(() => {
+                showToast('Gagal menyalin otomatis', 'warning');
+            });
+        }
+
+        function syncToGoogleSheets() {
+            if (!googleSheetsUrl) {
+                openSheetsModal();
+                return;
+            }
+
+            showToast('Mengirim data ke Google Sheets...', 'info');
+
+            const payload = {
+                className: classConfig[currentClass].name,
+                students: studentsData[currentClass]
+            };
+
+            fetch(googleSheetsUrl, {
+                method: 'POST',
+                mode: 'no-cors',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(payload)
+            }).then(() => {
+                showToast(`Data ${classConfig[currentClass].name} tersinkron ke Spreadsheet!`, 'success');
+            }).catch(err => {
+                console.error(err);
+                showToast('Gagal menyinkronkan ke Sheets', 'warning');
+            });
+        }
+
+        function syncToGoogleSheetsSilent() {
+            if (!googleSheetsUrl) return;
+            const payload = {
+                className: classConfig[currentClass].name,
+                students: studentsData[currentClass]
+            };
+            fetch(googleSheetsUrl, {
+                method: 'POST',
+                mode: 'no-cors',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(payload)
+            }).catch(e => console.log('Silent sync error', e));
+        }
+
+        function syncAttendanceToSheets() {
+            if (!googleSheetsUrl) {
+                openSheetsModal();
+                return;
+            }
+
+            const dateStr = getSelectedDate();
+            ensureAttendanceStructure(currentClass, dateStr);
+
+            const className = classConfig[currentClass].name;
+            const currentObj = attendanceData[currentClass][dateStr];
+            const students = studentsData[currentClass] || [];
+
+            const recordsPayload = students.map(s => {
+                const rec = currentObj.records[s.id] || { status: 'Hadir', note: '' };
+                return {
+                    nisn: s.nisn,
+                    name: s.name,
+                    status: rec.status,
+                    note: rec.note
+                };
+            });
+
+            showToast('Mengirim presensi ke Google Sheets...', 'info');
+
+            const payload = {
+                type: 'attendance',
+                className: className,
+                date: dateStr,
+                material: currentObj.material || '-',
+                records: recordsPayload
+            };
+
+            fetch(googleSheetsUrl, {
+                method: 'POST',
+                mode: 'no-cors',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(payload)
+            }).then(() => {
+                showToast(`Presensi ${className} tanggal ${dateStr} tersinkron!`, 'success');
+            }).catch(err => {
+                console.error(err);
+                showToast('Gagal menyinkronkan presensi ke Sheets', 'warning');
+            });
+        }
+
+        function exportToCSV() {
+            const className = classConfig[currentClass].name;
+            const students = studentsData[currentClass];
+
+            let csvContent = "data:text/csv;charset=utf-8,";
+            csvContent += "No,NISN,Nama Murid,Total Poin,Terakhir Diperbarui\n";
+
+            students.forEach((s, idx) => {
+                csvContent += `${idx + 1},${s.nisn},"${s.name}",${s.points},"${s.lastUpdated || '-'}"\n`;
+            });
+
+            const encodedUri = encodeURI(csvContent);
+            const link = document.createElement("a");
+            link.setAttribute("href", encodedUri);
+            link.setAttribute("download", `Leaderboard_Keaktifan_${className.replace(/\s+/g, '_')}_SMKN5.csv`);
+            document.body.appendChild(link);
+            link.click();
+            document.body.removeChild(link);
+
+            showToast(`File CSV ${className} berhasil diunduh!`, 'success');
+        }
+
+        function exportAttendanceCSV() {
+            const dateStr = getSelectedDate();
+            ensureAttendanceStructure(currentClass, dateStr);
+
+            const className = classConfig[currentClass].name;
+            const currentObj = attendanceData[currentClass][dateStr];
+            const students = studentsData[currentClass] || [];
+
+            let csvContent = "data:text/csv;charset=utf-8,";
+            csvContent += `REKAP PRESENSI - ${className}\n`;
+            csvContent += `Tanggal,${dateStr}\n`;
+            csvContent += `Materi,"${currentObj.material || '-'}"\n\n`;
+            csvContent += "No,NISN,Nama Murid,Status Kehadiran,Catatan\n";
+
+            students.forEach((s, idx) => {
+                const rec = currentObj.records[s.id] || { status: 'Hadir', note: '' };
+                csvContent += `${idx + 1},${s.nisn},"${s.name}",${rec.status},"${rec.note || '-'}"\n`;
+            });
+
+            const encodedUri = encodeURI(csvContent);
+            const link = document.createElement("a");
+            link.setAttribute("href", encodedUri);
+            link.setAttribute("download", `Presensi_${className.replace(/\s+/g, '_')}_${dateStr}.csv`);
+            document.body.appendChild(link);
+            link.click();
+            document.body.removeChild(link);
+
+            showToast(`File Presensi CSV ${className} (${dateStr}) diunduh!`, 'success');
+        }
+
+        function showToast(message, type = 'info') {
+            const container = document.getElementById('toastContainer');
+            const toast = document.createElement('div');
+
+            let bgClass = "bg-slate-800 text-white";
+            let icon = "fa-circle-info";
+
+            if (type === 'success') {
+                bgClass = "bg-emerald-600 text-white";
+                icon = "fa-circle-check";
+            } else if (type === 'warning') {
+                bgClass = "bg-amber-600 text-white";
+                icon = "fa-triangle-exclamation";
+            }
+
+            toast.className = `flex items-center gap-2.5 px-4 py-3 rounded-2xl shadow-xl ${bgClass} text-xs font-semibold animate-pop transition pointer-events-auto`;
+            toast.innerHTML = `<i class="fa-solid ${icon}"></i> <span>${message}</span>`;
+
+            container.appendChild(toast);
+
+            setTimeout(() => {
+                toast.style.opacity = '0';
+                toast.style.transform = 'translateY(10px)';
+                setTimeout(() => toast.remove(), 300);
+            }, 2500);
+        }
+
+        // Initialize App
+        window.onload = function() {
+            initData();
+        };
+    </script>
+</body>
+</html>
