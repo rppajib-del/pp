@@ -423,43 +423,81 @@
 
                 <div class="bg-emerald-50 border border-emerald-200 rounded-2xl p-4 space-y-2">
                     <h4 class="font-bold text-emerald-900 flex items-center gap-2 text-xs uppercase tracking-wider">
-                        <i class="fa-solid fa-circle-info"></i> Kode Apps Script Terbaru (Mendukung Poin + Presensi):
+                        <i class="fa-solid fa-circle-info"></i> Kode Apps Script Terbaru (Poin & Presensi Lengkap):
                     </h4>
                     <p class="text-xs text-emerald-800">Salin kode script di bawah ini ke menu **Apps Script** Google Spreadsheet Anda:</p>
 
                     <div class="relative mt-2">
-                        <pre class="bg-slate-900 text-emerald-400 p-3 rounded-xl text-[11px] overflow-x-auto font-mono max-h-48 leading-snug" id="appScriptCode">
+                        <pre class="bg-slate-900 text-emerald-400 p-3 rounded-xl text-[11px] overflow-x-auto font-mono max-h-56 leading-snug" id="appScriptCode">
 function doPost(e) {
-  var data = JSON.parse(e.postData.contents);
-  var ss = SpreadsheetApp.getActiveSpreadsheet();
-  
-  if (data.type === 'attendance') {
-    // Sheet khusus presensi per kelas & tanggal (Contoh: Absen X Tekstil A - 2026-09-08)
-    var sheetName = "Absen " + data.className + " (" + data.date + ")";
-    var sheet = ss.getSheetByName(sheetName);
-    if (!sheet) { sheet = ss.insertSheet(sheetName); }
-    sheet.clear();
-    sheet.appendRow(["SMKN 5 YOGYAKARTA - REKAP PRESENSI KELAS"]);
-    sheet.appendRow(["Kelas:", data.className]);
-    sheet.appendRow(["Tanggal:", data.date]);
-    sheet.appendRow(["Materi:", data.material || "-"]);
-    sheet.appendRow([]);
-    sheet.appendRow(["No", "NISN", "Nama Murid", "Status Kehadiran", "Catatan"]);
-    data.records.forEach(function(r, index) {
-      sheet.appendRow([index + 1, r.nisn, r.name, r.status, r.note || "-"]);
-    });
-  } else {
-    // Sheet Leaderboard Poin Per Kelas
-    var sheet = ss.getSheetByName(data.className);
-    if (!sheet) { sheet = ss.insertSheet(data.className); }
-    sheet.clear();
-    sheet.appendRow(["No", "NISN", "Nama Murid", "Total Poin", "Terakhir Diperbarui"]);
-    data.students.forEach(function(s, index) {
-      sheet.appendRow([index + 1, s.nisn, s.name, s.points, s.lastUpdated || new Date().toLocaleString("id-ID")]);
-    });
+  try {
+    var data = JSON.parse(e.postData.contents);
+    var ss = SpreadsheetApp.getActiveSpreadsheet();
+    
+    if (data.type === 'attendance') {
+      // Sheet khusus presensi per kelas & tanggal (Contoh: Absen X Tekstil A (2026-09-08))
+      var sheetName = "Absen " + data.className + " (" + data.date + ")";
+      var sheet = ss.getSheetByName(sheetName);
+      if (!sheet) { sheet = ss.insertSheet(sheetName); }
+      sheet.clear();
+      
+      var rows = [
+        ["SMKN 5 YOGYAKARTA - REKAP PRESENSI KELAS", "", "", "", ""],
+        ["Kelas:", data.className, "", "", ""],
+        ["Tanggal:", data.date, "", "", ""],
+        ["Materi:", data.material || "-", "", "", ""],
+        ["", "", "", "", ""],
+        ["No", "NISN", "Nama Murid", "Status Kehadiran", "Catatan"]
+      ];
+      
+      if (data.records && data.records.length > 0) {
+        data.records.forEach(function(r, index) {
+          rows.push([
+            index + 1,
+            "'" + (r.nisn || ""),
+            r.name || "",
+            r.status || "Hadir",
+            r.note || "-"
+          ]);
+        });
+      }
+      
+      sheet.getRange(1, 1, rows.length, 5).setValues(rows);
+      sheet.getRange("A1:E1").setFontWeight("bold").setFontSize(12);
+      sheet.getRange("A6:E6").setFontWeight("bold").setBackground("#e2e8f0");
+    } else {
+      // Sheet Leaderboard Poin Per Kelas
+      var sheetName = data.className;
+      var sheet = ss.getSheetByName(sheetName);
+      if (!sheet) { sheet = ss.insertSheet(sheetName); }
+      sheet.clear();
+      
+      var rows = [
+        ["No", "NISN", "Nama Murid", "Total Poin", "Terakhir Diperbarui"]
+      ];
+      
+      if (data.students && data.students.length > 0) {
+        data.students.forEach(function(s, index) {
+          rows.push([
+            index + 1,
+            "'" + (s.nisn || ""),
+            s.name || "",
+            s.points || 0,
+            s.lastUpdated || new Date().toLocaleString("id-ID")
+          ]);
+        });
+      }
+      
+      sheet.getRange(1, 1, rows.length, 5).setValues(rows);
+      sheet.getRange("A1:E1").setFontWeight("bold").setBackground("#e2e8f0");
+    }
+    
+    return ContentService.createTextOutput(JSON.stringify({status: "success"}))
+      .setMimeType(ContentService.MimeType.JSON);
+  } catch (err) {
+    return ContentService.createTextOutput(JSON.stringify({status: "error", message: err.toString()}))
+      .setMimeType(ContentService.MimeType.JSON);
   }
-  return ContentService.createTextOutput(JSON.stringify({status: "success"}))
-    .setMimeType(ContentService.MimeType.JSON);
 }</pre>
                         <button onclick="copyAppsScript()" class="absolute top-2 right-2 bg-white/20 hover:bg-white/30 text-white px-2 py-1 rounded text-[10px] font-semibold flex items-center gap-1 backdrop-blur-sm">
                             <i class="fa-solid fa-copy"></i> Salin Kode
